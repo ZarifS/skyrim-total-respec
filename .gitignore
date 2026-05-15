@@ -1,0 +1,13 @@
+# Build outputs
+dist/
+work/
+
+# .NET / Mutagen build artifacts
+**/bin/
+**/obj/
+*.user
+
+# OS junk
+Thumbs.db
+desktop.ini
+.DS_Store

@@ -1,0 +1,7 @@
+{
+    "_comment": "Total Respec config. Defaults are vanilla Skyrim race-base values. If you use a mod that changes the player's base attributes (e.g. SkyValor sets baseline Health to 300), edit the values below to match. The Draught of Renewal will reset your H/M/S/CarryWeight to these values, then let you spend (level - 1) tokens to re-allocate +10 each.",
+    "baselineHealth": 100,
+    "baselineMagicka": 100,
+    "baselineStamina": 100,
+    "baselineCarryWeight": 300
+}
