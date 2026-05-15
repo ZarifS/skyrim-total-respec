@@ -1,5 +1,7 @@
 {
-    "_comment": "Total Respec config. Defaults are vanilla Skyrim race-base values. If you use a mod that changes the player's base attributes (e.g. SkyValor sets baseline Health to 300), edit the values below to match. The Draught of Renewal will reset your H/M/S/CarryWeight to these values, then let you spend (level - 1) tokens to re-allocate +10 each.",
+    "_comment": "Total Respec config. Defaults are vanilla Skyrim race-base values. The Draught of Renewal resets H/M/S/CarryWeight to these values, then triggers vanilla level-ups so you re-allocate (level - 1) attribute points via Skyrim's native H/M/S choice menu.",
+    "_skyvalor": "If you use SkyValor (sets player base Health to 250 and Stamina+50), edit: baselineHealth: 250, baselineStamina: 150.",
+    "_survival_mode": "If you have Survival Mode active (Creation Club AE), edit: baselineCarryWeight: 150. Survival Mode halves the player's initial CW from 300 to 150 as a base-value change, so the JSON must match.",
     "baselineHealth": 100,
     "baselineMagicka": 100,
     "baselineStamina": 100,
