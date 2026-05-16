@@ -72,6 +72,11 @@ Event OnEffectStart(Actor akTarget, Actor akCaster)
     Float playerLvF = playerLv as Float
     Float totalExp = (playerLvF - 1.0) * levelUpBase + (levelUpMult * (playerLvF - 2.0) * (playerLvF + 1.0)) / 2.0 + levelUpMult + currLvExp
 
+    ; --- Step 3b: snapshot pre-respec Stamina BEFORE any resets so we can compute
+    ; the residual CW bonus from prior Stamina picks (engine doesn't clean it up
+    ; when we drop player level and reset Stamina via SetActorValue).
+    Float preStamina = akTarget.GetBaseActorValue("Stamina")
+
     ; --- Step 4: refund all perks ---
     perkCount = 0
     RefundPerksForTree("Alchemy",     akTarget)
@@ -121,24 +126,35 @@ Event OnEffectStart(Actor akTarget, Actor akCaster)
     Utility.Wait(1.0)
     Game.EnablePlayerControls()
 
-    ; --- Step 10b: deterministically set base CarryWeight to the formula value.
-    ; Don't trust whatever the engine ended up with - just compute what it should be from the
-    ; JSON baseline + the player's Stamina picks (+5 CW per Stamina level-up choice) and force
-    ; the base to that exact value. This is robust against:
-    ;   - Survival Mode suppressing the per-Stamina +5 CW bonus during synthetic level-ups
-    ;   - Equipped enchanted gear / Steed Stone / Extra Pockets (these are modifiers on top of
-    ;     base, so GetBaseActorValue already ignores them - we set the BASE, not effective)
-    ;   - Any other engine state we'd rather not depend on
+    ; --- Step 10b: clean up residual CW from prior Stamina picks + apply new ones.
+    ; Engine doesn't remove the +5/pick CW bonus when we reset Stamina back to baseline.
+    ; We have to do it ourselves.
+    ; Formula: deltaCW = (newStaminaPicks - priorStaminaPicks) * 5
+    ;   - newStaminaPicks: how much stamina the player has invested in THIS lifetime
+    ;                     (after level-ups complete; right now it's still 0 since they haven't allocated)
+    ;   - priorStaminaPicks: how much they had pre-respec (captured in Step 3b)
+    ; Equivalently: target base CW = baselineCW + newStaminaPicks*5, currentBase has +priorPicks*5
+    ; built into it from the prior life; subtract the difference.
     Float postStamina = akTarget.GetBaseActorValue("Stamina")
-    Float staminaPicks = (postStamina - baseS) / 10.0
-    If staminaPicks < 0.0
-        staminaPicks = 0.0
+    Float postPicks = (postStamina - baseS) / 10.0
+    If postPicks < 0.0
+        postPicks = 0.0
     EndIf
-    Float expectedCW = baseCW + staminaPicks * 5.0
+    Float priorPicks = (preStamina - baseS) / 10.0
+    If priorPicks < 0.0
+        priorPicks = 0.0
+    EndIf
+    Float cwDeltaFromStaminaTransition = (postPicks - priorPicks) * 5.0
+    If cwDeltaFromStaminaTransition != 0.0
+        akTarget.ModActorValue("CarryWeight", cwDeltaFromStaminaTransition)
+    EndIf
+
+    ; Belt-and-suspenders: force CW base to land exactly at baselineCW + postPicks*5.
+    Float expectedCW = baseCW + postPicks * 5.0
     Float currentBaseCW = akTarget.GetBaseActorValue("CarryWeight")
-    Float cwDelta = expectedCW - currentBaseCW
-    If cwDelta != 0.0
-        akTarget.ModActorValue("CarryWeight", cwDelta)
+    Float cwResidualDelta = expectedCW - currentBaseCW
+    If cwResidualDelta != 0.0
+        akTarget.ModActorValue("CarryWeight", cwResidualDelta)
     EndIf
 
     ; --- Step 11: summary popup ---

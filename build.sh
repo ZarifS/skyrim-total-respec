@@ -23,7 +23,7 @@ TK_ROOT="$(cd "$PROJ/../.." && pwd)"
 CAPRICA="${CAPRICA:-$TK_ROOT/../Caprica/Caprica.exe}"
 HEADERS="${HEADERS:-$PROJ/../_shared/papyrus-headers}"
 JCONTAINERS="${JCONTAINERS:-/c/Games/Skyrim Essentials/mods/JContainers SE/scripts/source}"
-DEPLOY_TO="${DEPLOY_TO:-/c/Games/Skyrim Essentials/mods/Total Respec (Custom)}"
+DEPLOY_TO="${DEPLOY_TO:-/c/Games/Skyrim Essentials/mods/Total Respec}"
 
 DIST="$PROJ/dist"
 STAGE="$DIST/Total Respec"
