@@ -121,6 +121,26 @@ Event OnEffectStart(Actor akTarget, Actor akCaster)
     Utility.Wait(1.0)
     Game.EnablePlayerControls()
 
+    ; --- Step 10b: deterministically set base CarryWeight to the formula value.
+    ; Don't trust whatever the engine ended up with - just compute what it should be from the
+    ; JSON baseline + the player's Stamina picks (+5 CW per Stamina level-up choice) and force
+    ; the base to that exact value. This is robust against:
+    ;   - Survival Mode suppressing the per-Stamina +5 CW bonus during synthetic level-ups
+    ;   - Equipped enchanted gear / Steed Stone / Extra Pockets (these are modifiers on top of
+    ;     base, so GetBaseActorValue already ignores them - we set the BASE, not effective)
+    ;   - Any other engine state we'd rather not depend on
+    Float postStamina = akTarget.GetBaseActorValue("Stamina")
+    Float staminaPicks = (postStamina - baseS) / 10.0
+    If staminaPicks < 0.0
+        staminaPicks = 0.0
+    EndIf
+    Float expectedCW = baseCW + staminaPicks * 5.0
+    Float currentBaseCW = akTarget.GetBaseActorValue("CarryWeight")
+    Float cwDelta = expectedCW - currentBaseCW
+    If cwDelta != 0.0
+        akTarget.ModActorValue("CarryWeight", cwDelta)
+    EndIf
+
     ; --- Step 11: summary popup ---
     Int attrCount = playerLv - 1
     If attrCount < 0
