@@ -5,7 +5,7 @@ using Mutagen.Bethesda.Skyrim;
 var modKey = ModKey.FromNameAndExtension("TotalRespec.esp");
 var mod = new SkyrimMod(modKey, SkyrimRelease.SkyrimSE);
 
-mod.ModHeader.Author = "meteor";
+mod.ModHeader.Author = "OriginalZee";
 mod.ModHeader.Description = "Total Respec - one potion: confirm, refund all perks, reset H/M/S/CW to baselines from Data/SKSE/Plugins/TotalRespec.json, then spend (level-1) tokens on H/M/S.";
 
 // ---------- FormList ----------
@@ -102,29 +102,6 @@ mod.Ingestibles.Add(renewalPotion);
 
 renewalScript.Properties.Add(Prop("TR_RenewalPotion", renewalPotion.FormKey));
 
-// ---------- Wrapper Leveled List (for SkyPatcher injection) ----------
-var renewalPotionLL = new LeveledItem(mod.GetNextFormKey(), SkyrimRelease.SkyrimSE)
-{
-    EditorID = "TR_RenewalPotionLL",
-    ChanceNone = new Noggog.Percent(0.0),
-    Flags = LeveledItem.Flag.CalculateForEachItemInCount | LeveledItem.Flag.CalculateFromAllLevelsLessThanOrEqualPlayer,
-};
-renewalPotionLL.Entries = new Noggog.ExtendedList<LeveledItemEntry>
-{
-    new LeveledItemEntry
-    {
-        Data = new LeveledItemEntryData
-        {
-            Level = 1,
-            Count = 1,
-            Reference = new FormLink<Mutagen.Bethesda.Skyrim.IItemGetter>(renewalPotion.FormKey),
-        },
-    },
-};
-mod.LeveledItems.Add(renewalPotionLL);
-
-Console.WriteLine($"  Wrapper LL    FormKey: {renewalPotionLL.FormKey}");
-
 // ---------- Write output ----------
 string outDir = args.Length > 0 ? args[0] : ".";
 System.IO.Directory.CreateDirectory(outDir);
@@ -134,16 +111,24 @@ mod.WriteToBinary(outPath);
 Console.WriteLine($"Wrote: {outPath}");
 Console.WriteLine($"  Master potion FormKey: {renewalPotion.FormKey}");
 
-// ---------- Emit SkyPatcher INI for leveled-list injection ----------
-string skyPatcherDir = System.IO.Path.Combine(outDir, "SKSE", "Plugins", "SkyPatcher", "leveledList", "TotalRespec");
+// ---------- Emit SkyPatcher INI: Khajiit-caravan-only distribution ----------
+// Vanilla has NO caravan-exclusive leveled list — the Khajiit trader caravans
+// draw from shared general-vendor lists (LItemMiscVendorPotion50, etc.) used by
+// every merchant, so a leveled-list injection cannot be caravan-only. To keep the
+// Draught of Renewal exclusive to Ri'saad's three Khajiit caravans, we inject the
+// potion directly into their merchant containers (verified against Skyrim.esm):
+//   MerchantCaravanAChest 0x07434B, B 0x07434D, C 0x07434E.
+// (Adding a leveled list to a container is disabled by default in SkyPatcher as a
+//  crash risk, so we add the ALCH record itself, count 1, once per container.)
+string skyPatcherDir = System.IO.Path.Combine(outDir, "SKSE", "Plugins", "SkyPatcher", "container", "TotalRespec");
 System.IO.Directory.CreateDirectory(skyPatcherDir);
-string llHex = renewalPotionLL.FormKey.ID.ToString("X6");
-string iniContent = "; Total Respec - SkyPatcher leveled-list injection\n" +
-    "; Wraps TR_RenewalPotion in TR_RenewalPotionLL and injects it into vanilla apothecary lists\n" +
-    "; so the Draught of Renewal appears in apothecary inventories (rare, 5000g base value).\n" +
+string potionHex = renewalPotion.FormKey.ID.ToString("X6");
+string iniContent =
+    "; Total Respec - SkyPatcher container injection (Khajiit caravans only)\n" +
+    "; Adds the Draught of Renewal to the three Khajiit trader caravan merchant chests\n" +
+    "; (MerchantCaravanAChest/B/C in Skyrim.esm) so it is sold ONLY by Ri'saad's caravans.\n" +
+    "; No other vendor stocks it. Requires SkyPatcher.\n" +
     "\n" +
-    "; LItemApothecaryPotionMagicEffects75 - standard apothecary magic-effect potion list\n" +
-    "; (used by every major apothecary: Arcadia, Elgrim, Bothela, Hrolthar, etc.)\n" +
-    $"filterByLLs=Skyrim.esm|0009CD41:addOnceToLLs=TotalRespec.esp|{llHex}\n";
+    $"filterByContainers=Skyrim.esm|07434B,Skyrim.esm|07434D,Skyrim.esm|07434E:addOnceToContainers=TotalRespec.esp|{potionHex}~1\n";
 System.IO.File.WriteAllText(System.IO.Path.Combine(skyPatcherDir, "TotalRespec.ini"), iniContent);
-Console.WriteLine($"  SkyPatcher INI:        SKSE/Plugins/SkyPatcher/leveledList/TotalRespec/TotalRespec.ini");
+Console.WriteLine($"  SkyPatcher INI:        SKSE/Plugins/SkyPatcher/container/TotalRespec/TotalRespec.ini");
