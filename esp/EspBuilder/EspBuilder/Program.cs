@@ -86,7 +86,10 @@ var renewalPotion = new Ingestible(mod.GetNextFormKey(), SkyrimRelease.SkyrimSE)
     Name = "Draught of Renewal",
     Weight = 0.1f,
     Value = 5000,
-    Flags = Ingestible.Flag.Medicine,
+    // Medicine + NoAutoCalc (ENIT bit 0): without NoAutoCalc the engine ignores
+    // the stored Value and auto-calculates price from the (zero-magnitude) effect,
+    // flooring to 1 gold. Setting it makes the 5000 gold value stick.
+    Flags = Ingestible.Flag.Medicine | Ingestible.Flag.NoAutoCalc,
     Model = new Model
     {
         File = @"Clutter\Potions\PotionFortifyMagickaExtreme.nif",
